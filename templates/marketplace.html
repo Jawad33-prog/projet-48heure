@@ -58,7 +58,7 @@
                         <option value="">All Countries</option>
                         {{range .Countries}}
                             <option value="{{.}}" {{if eq . $.Filter.Country}}selected{{end}}>
-                                {{.}} {{index $.CountryEmojis .}}
+                                {{index $.CountryEmojis .}} {{.}}
                             </option>
                         {{end}}
                     </select>
