@@ -57,7 +57,9 @@
                     >
                         <option value="">All Countries</option>
                         {{range .Countries}}
-                            <option value="{{.}}" {{if eq . $.Filter.Country}}selected{{end}}>{{.}}</option>
+                            <option value="{{.}}" {{if eq . $.Filter.Country}}selected{{end}}>
+                                {{.}} {{index $.CountryEmojis .}}
+                            </option>
                         {{end}}
                     </select>
                 </div>
@@ -123,7 +125,7 @@
                             <div class="flex justify-between items-center">
                                 <div>
                                     <p class="text-sm text-gray-500">
-                                        {{.Variety}} | {{.Region}}, {{.Country}}
+                                        {{.Variety}} | {{.Region}}, {{.Country}} {{.CountryEmoji}}
                                     </p>
                                     <p class="text-lg font-bold text-green-600">
                                         ${{printf "%.2f" .Price}}
