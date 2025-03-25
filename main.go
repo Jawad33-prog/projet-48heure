@@ -243,22 +243,137 @@ func parseFloatParam(r *http.Request, param string, defaultValue float64) float6
 	return value
 }
 
+// Nouvelle fonction pour obtenir les pays uniques
+func getUniqueCountries() []string {
+	uniqueCountries := make(map[string]bool)
+	var countries []string
+
+	for _, wine := range wines {
+		if wine.Country != "" && !uniqueCountries[wine.Country] {
+			uniqueCountries[wine.Country] = true
+			countries = append(countries, wine.Country)
+		}
+	}
+
+	return countries
+}
+
+// Nouvelle fonction pour obtenir les régions d'un pays spécifique
+func getUniqueRegionsForCountry(country string) []string {
+	uniqueRegions := make(map[string]bool)
+	var regions []string
+
+	for _, wine := range wines {
+		if strings.EqualFold(wine.Country, country) && wine.Region != "" && !uniqueRegions[wine.Region] {
+			uniqueRegions[wine.Region] = true
+			regions = append(regions, wine.Region)
+		}
+	}
+
+	return regions
+}
+
+// Nouvelle fonction pour obtenir les variétés d'une région spécifique
+func getUniqueVarietiesForRegion(country, region string) []string {
+	uniqueVarieties := make(map[string]bool)
+	var varieties []string
+
+	for _, wine := range wines {
+		if strings.EqualFold(wine.Country, country) &&
+			strings.EqualFold(wine.Region, region) &&
+			wine.Variety != "" &&
+			!uniqueVarieties[wine.Variety] {
+			uniqueVarieties[wine.Variety] = true
+			varieties = append(varieties, wine.Variety)
+		}
+	}
+
+	return varieties
+}
+
+// Nouvelle fonction pour filtrer les vins selon pays, région et variété
+func filterWinesBySelection(country, region, variety string) []Wine {
+	var filteredWines []Wine
+
+	for _, wine := range wines {
+		if strings.EqualFold(wine.Country, country) &&
+			(region == "" || strings.EqualFold(wine.Region, region)) &&
+			(variety == "" || strings.EqualFold(wine.Variety, variety)) {
+			filteredWines = append(filteredWines, wine)
+		}
+	}
+
+	return filteredWines
+}
+
+// Gestionnaire de route pour la nouvelle approche de sélection
+func wineSelectionHandler(w http.ResponseWriter, r *http.Request) {
+	country := r.URL.Query().Get("country")
+	region := r.URL.Query().Get("region")
+	variety := r.URL.Query().Get("variety")
+
+	// Données pour le template
+	data := struct {
+		Countries       []string
+		Regions         []string
+		Varieties       []string
+		SelectedWines   []Wine
+		CountryEmojis   map[string]string
+		SelectedCountry string
+		SelectedRegion  string
+		SelectedVariety string
+	}{
+		Countries:       getUniqueCountries(),
+		CountryEmojis:   countryToEmoji,
+		SelectedCountry: country,
+		SelectedRegion:  region,
+		SelectedVariety: variety,
+	}
+
+	// Si un pays est sélectionné, récupérer ses régions
+	if country != "" {
+		data.Regions = getUniqueRegionsForCountry(country)
+	}
+
+	// Si une région est sélectionnée, récupérer ses variétés
+	if country != "" && region != "" {
+		data.Varieties = getUniqueVarietiesForRegion(country, region)
+	}
+
+	// Si tous les filtres sont définis, sélectionner les vins
+	if country != "" && region != "" && variety != "" {
+		data.SelectedWines = filterWinesBySelection(country, region, variety)
+	}
+
+	// Parser et exécuter le template
+	tmpl, err := template.ParseFiles("templates/wine-selection.html")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	err = tmpl.Execute(w, data)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
 func main() {
-	// Load wines from JSON file
+	// Charger les vins
 	err := loadWinesFromJSON("wine-data-set.json")
 	if err != nil {
-		fmt.Printf("Error loading wine data: %v\n", err)
+		fmt.Printf("Erreur de chargement des données de vin : %v\n", err)
 		os.Exit(1)
 	}
 
-	// Serve static files
+	// Servir les fichiers statiques
 	fs := http.FileServer(http.Dir("./static"))
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
 
-	// Route for wine marketplace
-	http.HandleFunc("/", wineMarketplaceHandler)
+	// Nouvelle route pour la sélection de vins
+	http.HandleFunc("/", wineSelectionHandler)
 
-	// Start the server
-	fmt.Println("Server starting on http://localhost:8080")
+	// Démarrer le serveur
+	fmt.Println("Serveur démarré sur http://localhost:8080")
 	http.ListenAndServe(":8080", nil)
 }
