@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wine Marketplace</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto p-4">
+        <h1 class="text-3xl font-bold mb-6 text-center">Wine Marketplace</h1>
+
+        <!-- Filters -->
+        <form method="get" class="bg-white shadow-md rounded-lg p-6 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <!-- Min Points Filter -->
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="minPoints">
+                        Minimum Points
+                    </label>
+                    <input 
+                        type="number" 
+                        name="minPoints" 
+                        id="minPoints"
+                        value="{{.Filter.MinPoints}}"
+                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700"
+                        min="0" 
+                        max="100"
+                    >
+                </div>
+
+                <!-- Max Price Filter -->
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="maxPrice">
+                        Maximum Price
+                    </label>
+                    <input 
+                        type="number" 
+                        name="maxPrice" 
+                        id="maxPrice"
+                        value="{{.Filter.MaxPrice}}"
+                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700"
+                        min="0"
+                        step="0.01"
+                    >
+                </div>
+
+                <!-- Country Filter -->
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="country">
+                        Country
+                    </label>
+                    <select 
+                        name="country" 
+                        id="country"
+                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700"
+                    >
+                        <option value="">All Countries</option>
+                        {{range .Countries}}
+                            <option value="{{.}}" {{if eq . $.Filter.Country}}selected{{end}}>{{.}}</option>
+                        {{end}}
+                    </select>
+                </div>
+
+                <!-- Variety Filter -->
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="variety">
+                        Variety
+                    </label>
+                    <select 
+                        name="variety" 
+                        id="variety"
+                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700"
+                    >
+                        <option value="">All Varieties</option>
+                        {{range .Varieties}}
+                            <option value="{{.}}" {{if eq . $.Filter.Variety}}selected{{end}}>{{.}}</option>
+                        {{end}}
+                    </select>
+                </div>
+            </div>
+
+            <div class="mt-4 text-center flex justify-center items-center gap-4">
+                <button 
+                    type="submit" 
+                    class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                >
+                    Apply Filters
+                </button>
+                
+                <div class="text-gray-600">
+                    Total Wines: {{.TotalWines}}
+                </div>
+            </div>
+        </form>
+
+        <!-- Wine Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {{if .Wines}}
+                {{range .Wines}}
+                    <div class="bg-white shadow-md rounded-lg overflow-hidden transform transition duration-300 hover:scale-105">
+                        <!-- Placeholder Image -->
+                        <img 
+                            src="/static/placeholder-wine.png" 
+                            alt="Wine Placeholder" 
+                            class="w-full h-64 object-cover"
+                        >
+                        
+                        <div class="p-6">
+                            <div class="flex justify-between items-center mb-2">
+                                <h2 class="text-xl font-bold text-gray-800">{{.Winery}}</h2>
+                                <span class="bg-yellow-400 text-yellow-800 text-xs font-bold px-2 py-1 rounded">
+                                    {{.Points}}/100
+                                </span>
+                            </div>
+
+                            <h3 class="text-lg font-semibold mb-2">{{.Title}}</h3>
+
+                            <p class="text-gray-600 mb-4 h-20 overflow-hidden">
+                                {{.Description}}
+                            </p>
+
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <p class="text-sm text-gray-500">
+                                        {{.Variety}} | {{.Region}}, {{.Country}}
+                                    </p>
+                                    <p class="text-lg font-bold text-green-600">
+                                        ${{printf "%.2f" .Price}}
+                                    </p>
+                                </div>
+
+                                <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                                    Add to Cart
+                                </button>
+                            </div>
+
+                            <div class="mt-2 text-sm text-gray-500">
+                                Tasted by {{.TasterName}} ({{.TasterTwitter}})
+                            </div>
+                        </div>
+                    </div>
+                {{end}}
+            {{else}}
+                <div class="col-span-full text-center text-gray-600 py-10">
+                    No wines match your current filters.
+                </div>
+            {{end}}
+        </div>
+    </div>
+</body>
+</html>
