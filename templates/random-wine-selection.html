@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Découverte Aléatoire de Vins</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Découverte Aléatoire de Vins 🎲🍷</h1>
+
+        <div class="random-selection-info">
+            <h2>Votre sélection aléatoire</h2>
+            <p>
+                <strong>Pays :</strong> {{.RandomCountry}} {{index .CountryEmojis .RandomCountry}}<br>
+                <strong>Région :</strong> {{.RandomRegion}}<br>
+                <strong>Variété :</strong> {{.RandomVariety}}
+            </p>
+
+            <form method="get" action="/">
+                <button type="submit" class="random-button">🔄 Nouvelle Sélection Aléatoire</button>
+            </form>
+        </div>
+
+        <div class="wine-results">
+            <h2>Vins correspondants</h2>
+            {{if .SelectedWines}}
+                <div class="wine-grid">
+                    {{range .SelectedWines}}
+                    <div class="wine-card">
+                        <h3>{{.Title}}</h3>
+                        <p>{{.Winery}} - {{.Variety}}</p>
+                        <p>{{.Region}}, {{.Country}} {{index $.CountryEmojis .Country}}</p>
+                        <p>Prix: {{printf "%.2f" .Price}}€</p>
+                        <p>Notes: {{.Points}}/100</p>
+                        <p>{{.Description}}</p>
+                    </div>
+                    {{end}}
+                </div>
+            {{else}}
+                <p>Aucun vin trouvé pour cette sélection aléatoire.</p>
+            {{end}}
+        </div>
+    </div>
+
+    <script>
+        // Optionnel : ajout d'un rafraîchissement automatique toutes les X secondes
+        setTimeout(() => {
+            window.location.reload();
+        }, 30000); // Recharge la page tous les 30 secondes
+    </script>
+</body>
+</html>
