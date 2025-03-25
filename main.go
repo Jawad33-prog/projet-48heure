@@ -10,6 +10,30 @@ import (
 	"strings"
 )
 
+// Country to Emoji mapping
+var countryToEmoji = map[string]string{
+	"US":           "🇺🇸",
+	"France":       "🇫🇷",
+	"Italy":        "🇮🇹",
+	"Spain":        "🇪🇸",
+	"Portugal":     "🇵🇹",
+	"Argentina":    "🇦🇷",
+	"Chile":        "🇨🇱",
+	"Australia":    "🇦🇺",
+	"New Zealand":  "🇳🇿",
+	"South Africa": "🇿🇦",
+	"Germany":      "🇩🇪",
+	"Austria":      "🇦🇹",
+	"Greece":       "🇬🇷",
+	"Canada":       "🇨🇦",
+	"Brazil":       "🇧🇷",
+	"Bulgaria":     "🇧🇬",
+	"Hungary":      "🇭🇺",
+	"Slovenia":     "🇸🇮",
+	"Romania":      "🇷🇴",
+	"Croatia":      "🇭🇷",
+}
+
 // Wine struct represents the wine data model
 type Wine struct {
 	Points        int     `json:"points,omitempty"`
@@ -23,6 +47,7 @@ type Wine struct {
 	Region        string  `json:"region_1,omitempty"`
 	Province      string  `json:"province,omitempty"`
 	Country       string  `json:"country,omitempty"`
+	CountryEmoji  string  `json:"-"`
 	Winery        string  `json:"winery,omitempty"`
 }
 
@@ -49,6 +74,10 @@ func loadWinesFromJSON(filename string) error {
 	var wineArray []Wine
 	err = json.Unmarshal(file, &wineArray)
 	if err == nil {
+		// Add country emojis
+		for i := range wineArray {
+			wineArray[i].CountryEmoji = countryToEmoji[wineArray[i].Country]
+		}
 		wines = wineArray
 		return nil
 	}
@@ -57,6 +86,7 @@ func loadWinesFromJSON(filename string) error {
 	var singleWine Wine
 	err = json.Unmarshal(file, &singleWine)
 	if err == nil {
+		singleWine.CountryEmoji = countryToEmoji[singleWine.Country]
 		wines = []Wine{singleWine}
 		return nil
 	}
@@ -77,6 +107,10 @@ func loadWinesFromJSON(filename string) error {
 		return fmt.Errorf("error parsing JSON: %v", err)
 	}
 
+	// Add country emojis
+	for i := range wineArray {
+		wineArray[i].CountryEmoji = countryToEmoji[wineArray[i].Country]
+	}
 	wines = wineArray
 	return nil
 }
@@ -124,11 +158,17 @@ func getUniqueValues(field string) []string {
 // Handler for the main page
 func wineMarketplaceHandler(w http.ResponseWriter, r *http.Request) {
 	// Parse filter parameters
+	minPoints := parseIntParam(r, "minPoints", 0)
+	maxPrice := parseFloatParam(r, "maxPrice", 1000)
+	country := r.URL.Query().Get("country")
+	variety := r.URL.Query().Get("variety")
+
+	// Create filter
 	filter := WineFilter{
-		MinPoints: parseIntParam(r, "minPoints", 0),
-		MaxPrice:  parseFloatParam(r, "maxPrice", 1000),
-		Country:   r.URL.Query().Get("country"),
-		Variety:   r.URL.Query().Get("variety"),
+		MinPoints: minPoints,
+		MaxPrice:  maxPrice,
+		Country:   country,
+		Variety:   variety,
 	}
 
 	// Filter wines
@@ -136,17 +176,19 @@ func wineMarketplaceHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Prepare template data
 	data := struct {
-		Wines      []Wine
-		Filter     WineFilter
-		Countries  []string
-		Varieties  []string
-		TotalWines int
+		Wines         []Wine
+		Filter        WineFilter
+		Countries     []string
+		Varieties     []string
+		TotalWines    int
+		CountryEmojis map[string]string
 	}{
-		Wines:      filteredWines,
-		Filter:     filter,
-		Countries:  getUniqueValues("country"),
-		Varieties:  getUniqueValues("variety"),
-		TotalWines: len(filteredWines),
+		Wines:         filteredWines,
+		Filter:        filter,
+		Countries:     getUniqueValues("country"),
+		Varieties:     getUniqueValues("variety"),
+		TotalWines:    len(filteredWines),
+		CountryEmojis: countryToEmoji,
 	}
 
 	// Parse and execute the template
