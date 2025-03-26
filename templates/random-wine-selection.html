@@ -20,7 +20,7 @@
                 {{else}}
                     <p>Aucun pays sélectionné</p>
                 {{end}}
-                <a href="/?action=randomCountry" class="random-button">
+                <a href="/random-wine-selection?action=randomCountry" class="random-button">
                     🎲 Pays Aléatoire
                 </a>
             </div>
@@ -36,7 +36,7 @@
                     <p>Aucune province sélectionnée</p>
                 {{end}}
                 {{if .Selection.Country}}
-                    <a href="/?action=randomProvince" class="random-button">
+                    <a href="/random-wine-selection?action=randomProvince" class="random-button">
                         🎲 Province Aléatoire
                     </a>
                 {{else}}
@@ -57,7 +57,7 @@
                     <p>Aucune variété sélectionnée</p>
                 {{end}}
                 {{if and .Selection.Country .Selection.Province}}
-                    <a href="/?action=randomVariety" class="random-button">
+                    <a href="/random-wine-selection?action=randomVariety" class="random-button">
                         🎲 Variété Aléatoire
                     </a>
                 {{else}}

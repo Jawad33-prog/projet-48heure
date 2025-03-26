@@ -294,21 +294,6 @@ func getUniqueVarietiesForRegion(country, region string) []string {
 	return varieties
 }
 
-// Nouvelle fonction pour filtrer les vins selon pays, région et variété
-func filterWinesBySelection(country, region, variety string) []Wine {
-	var filteredWines []Wine
-
-	for _, wine := range wines {
-		if strings.EqualFold(wine.Country, country) &&
-			(region == "" || strings.EqualFold(wine.Region, region)) &&
-			(variety == "" || strings.EqualFold(wine.Variety, variety)) {
-			filteredWines = append(filteredWines, wine)
-		}
-	}
-
-	return filteredWines
-}
-
 // Gestionnaire de route pour la nouvelle approche de sélection
 func wineSelectionHandler(w http.ResponseWriter, r *http.Request) {
 	country := r.URL.Query().Get("country")
@@ -420,9 +405,9 @@ func main() {
 
 // Structure pour stocker la sélection
 type WineSelection struct {
-	Country string
-	Region  string
-	Variety string
+	Country  string
+	Province string
+	Variety  string
 }
 
 // Variable globale pour stocker la sélection en cours
@@ -455,7 +440,53 @@ func getRandomVarietyForRegion(country, region string) string {
 	return varieties[rand.Intn(len(varieties))]
 }
 
-// Gestionnaire de route pour la sélection aléatoire par étapes
+// Nouvelle fonction pour obtenir les provinces d'un pays spécifique
+func getUniqueProvincesForCountry(country string) []string {
+	uniqueProvinces := make(map[string]bool)
+	var provinces []string
+
+	for _, wine := range wines {
+		if strings.EqualFold(wine.Country, country) && wine.Province != "" && !uniqueProvinces[wine.Province] {
+			uniqueProvinces[wine.Province] = true
+			provinces = append(provinces, wine.Province)
+		}
+	}
+
+	return provinces
+}
+
+// Nouvelle fonction pour obtenir les variétés d'une province spécifique
+func getUniqueVarietiesForProvince(country, province string) []string {
+	uniqueVarieties := make(map[string]bool)
+	var varieties []string
+
+	for _, wine := range wines {
+		if strings.EqualFold(wine.Country, country) &&
+			strings.EqualFold(wine.Province, province) &&
+			wine.Variety != "" &&
+			!uniqueVarieties[wine.Variety] {
+			uniqueVarieties[wine.Variety] = true
+			varieties = append(varieties, wine.Variety)
+		}
+	}
+
+	return varieties
+}
+
+// Fonction pour filtrer les vins selon pays, province et variété
+func filterWinesBySelection(country, province, variety string) []Wine {
+	var filteredWines []Wine
+
+	for _, wine := range wines {
+		if strings.EqualFold(wine.Country, country) &&
+			(province == "" || strings.EqualFold(wine.Province, province)) &&
+			(variety == "" || strings.EqualFold(wine.Variety, variety)) {
+			filteredWines = append(filteredWines, wine)
+		}
+	}
+
+	return filteredWines
+}
 func randomWineSelectionHandler(w http.ResponseWriter, r *http.Request) {
 	// Initialiser le générateur de nombres aléatoires
 	rand.Seed(time.Now().UnixNano())
@@ -467,34 +498,22 @@ func randomWineSelectionHandler(w http.ResponseWriter, r *http.Request) {
 	switch action {
 	case "randomCountry":
 		currentSelection.Country = getRandomCountry()
-		currentSelection.Region = ""
-		currentSelection.Variety = ""
-	case "randomRegion":
+		currentSelection.Province = "" // Réinitialiser la province
+		currentSelection.Variety = ""  // Réinitialiser la variété
+	case "randomProvince":
 		if currentSelection.Country == "" {
 			currentSelection.Country = getRandomCountry()
 		}
-		currentSelection.Region = getRandomRegionForCountry(currentSelection.Country)
-		currentSelection.Variety = ""
+		currentSelection.Province = getRandomProvinceForCountry(currentSelection.Country)
+		currentSelection.Variety = "" // Réinitialiser la variété
 	case "randomVariety":
 		if currentSelection.Country == "" {
 			currentSelection.Country = getRandomCountry()
 		}
-		if currentSelection.Region == "" {
-			currentSelection.Region = getRandomRegionForCountry(currentSelection.Country)
+		if currentSelection.Province == "" {
+			currentSelection.Province = getRandomProvinceForCountry(currentSelection.Country)
 		}
-		currentSelection.Variety = getRandomVarietyForRegion(currentSelection.Country, currentSelection.Region)
-	}
-
-	// Filtrer les vins
-	var selectedWines []Wine
-	if currentSelection.Country != "" &&
-		currentSelection.Region != "" &&
-		currentSelection.Variety != "" {
-		selectedWines = filterWinesBySelection(
-			currentSelection.Country,
-			currentSelection.Region,
-			currentSelection.Variety,
-		)
+		currentSelection.Variety = getRandomVarietyForProvince(currentSelection.Country, currentSelection.Province)
 	}
 
 	// Données pour le template
@@ -503,8 +522,12 @@ func randomWineSelectionHandler(w http.ResponseWriter, r *http.Request) {
 		SelectedWines []Wine
 		CountryEmojis map[string]string
 	}{
-		Selection:     currentSelection,
-		SelectedWines: selectedWines,
+		Selection: currentSelection,
+		SelectedWines: filterWinesBySelection(
+			currentSelection.Country,
+			currentSelection.Province,
+			currentSelection.Variety,
+		),
 		CountryEmojis: countryToEmoji,
 	}
 
@@ -519,4 +542,22 @@ func randomWineSelectionHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
+}
+
+// Fonction pour obtenir une province aléatoire pour un pays
+func getRandomProvinceForCountry(country string) string {
+	provinces := getUniqueProvincesForCountry(country)
+	if len(provinces) == 0 {
+		return ""
+	}
+	return provinces[rand.Intn(len(provinces))]
+}
+
+// Fonction pour obtenir une variété aléatoire pour une province
+func getRandomVarietyForProvince(country, province string) string {
+	varieties := getUniqueVarietiesForProvince(country, province)
+	if len(varieties) == 0 {
+		return ""
+	}
+	return varieties[rand.Intn(len(varieties))]
 }
