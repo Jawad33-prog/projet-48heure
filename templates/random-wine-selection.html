@@ -8,47 +8,91 @@
 </head>
 <body>
     <div class="container">
-        <h1>Découverte Aléatoire de Vins 🎲🍷</h1>
+        <h1>🍷 Découverte Aléatoire de Vins 🎲</h1>
 
-        <div class="random-selection-info">
-            <h2>Votre sélection aléatoire</h2>
-            <p>
-                <strong>Pays :</strong> {{.RandomCountry}} {{index .CountryEmojis .RandomCountry}}<br>
-                <strong>Région :</strong> {{.RandomRegion}}<br>
-                <strong>Variété :</strong> {{.RandomVariety}}
-            </p>
+        <div class="random-selection-steps">
+            <!-- Sélection du Pays -->
+            <div class="selection-step">
+                <h2>Pays 🌍</h2>
+                {{if .Selection.Country}}
+                    <p class="selected-item">
+                        {{.Selection.Country}} {{index .CountryEmojis .Selection.Country}}
+                    </p>
+                {{else}}
+                    <p>Aucun pays sélectionné</p>
+                {{end}}
+                <a href="/?action=randomCountry" class="random-button">
+                    🎲 Pays Aléatoire
+                </a>
+            </div>
 
-            <form method="get" action="/">
-                <button type="submit" class="random-button">🔄 Nouvelle Sélection Aléatoire</button>
-            </form>
+            <!-- Sélection de la Région -->
+            <div class="selection-step">
+                <h2>Région 🏞️</h2>
+                {{if .Selection.Region}}
+                    <p class="selected-item">
+                        {{.Selection.Region}}
+                    </p>
+                {{else}}
+                    <p>Aucune région sélectionnée</p>
+                {{end}}
+                {{if .Selection.Country}}
+                    <a href="/?action=randomRegion" class="random-button">
+                        🎲 Région Aléatoire
+                    </a>
+                {{else}}
+                    <button class="random-button disabled" disabled>
+                        Sélectionnez un pays d'abord
+                    </button>
+                {{end}}
+            </div>
+
+            <!-- Sélection de la Variété -->
+            <div class="selection-step">
+                <h2>Variété 🍇</h2>
+                {{if .Selection.Variety}}
+                    <p class="selected-item">
+                        {{.Selection.Variety}}
+                    </p>
+                {{else}}
+                    <p>Aucune variété sélectionnée</p>
+                {{end}}
+                {{if and .Selection.Country .Selection.Region}}
+                    <a href="/?action=randomVariety" class="random-button">
+                        🎲 Variété Aléatoire
+                    </a>
+                {{else}}
+                    <button class="random-button disabled" disabled>
+                        Sélectionnez un pays et une région d'abord
+                    </button>
+                {{end}}
+            </div>
         </div>
 
+        <!-- Résultats des Vins -->
         <div class="wine-results">
-            <h2>Vins correspondants</h2>
-            {{if .SelectedWines}}
-                <div class="wine-grid">
-                    {{range .SelectedWines}}
-                    <div class="wine-card">
-                        <h3>{{.Title}}</h3>
-                        <p>{{.Winery}} - {{.Variety}}</p>
-                        <p>{{.Region}}, {{.Country}} {{index $.CountryEmojis .Country}}</p>
-                        <p>Prix: {{printf "%.2f" .Price}}€</p>
-                        <p>Notes: {{.Points}}/100</p>
-                        <p>{{.Description}}</p>
+            <h2>Vins Correspondants</h2>
+            {{if and .Selection.Country .Selection.Region .Selection.Variety}}
+                {{if .SelectedWines}}
+                    <div class="wine-grid">
+                        {{range .SelectedWines}}
+                        <div class="wine-card">
+                            <h3>{{.Title}}</h3>
+                            <p>{{.Winery}} - {{.Variety}}</p>
+                            <p>{{.Region}}, {{.Country}} {{index $.CountryEmojis .Country}}</p>
+                            <p>Prix: {{printf "%.2f" .Price}}€</p>
+                            <p>Notes: {{.Points}}/100</p>
+                            <p>{{.Description}}</p>
+                        </div>
+                        {{end}}
                     </div>
-                    {{end}}
-                </div>
+                {{else}}
+                    <p>Aucun vin trouvé pour cette sélection.</p>
+                {{end}}
             {{else}}
-                <p>Aucun vin trouvé pour cette sélection aléatoire.</p>
+                <p>Sélectionnez un pays, une région et une variété pour voir les vins.</p>
             {{end}}
         </div>
     </div>
-
-    <script>
-        // Optionnel : ajout d'un rafraîchissement automatique toutes les X secondes
-        setTimeout(() => {
-            window.location.reload();
-        }, 30000); // Recharge la page tous les 30 secondes
-    </script>
 </body>
 </html>

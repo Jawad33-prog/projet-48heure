@@ -245,76 +245,6 @@ func parseFloatParam(r *http.Request, param string, defaultValue float64) float6
 	return value
 }
 
-// [Conservez les structs et fonctions existantes comme Wine, countryToEmoji, etc.]
-
-// Nouvelle fonction pour obtenir un pays aléatoire
-func getRandomCountry() string {
-	countries := getUniqueCountries()
-	if len(countries) == 0 {
-		return ""
-	}
-	return countries[rand.Intn(len(countries))]
-}
-
-// Nouvelle fonction pour obtenir une région aléatoire pour un pays
-func getRandomRegionForCountry(country string) string {
-	regions := getUniqueRegionsForCountry(country)
-	if len(regions) == 0 {
-		return ""
-	}
-	return regions[rand.Intn(len(regions))]
-}
-
-// Nouvelle fonction pour obtenir une variété aléatoire pour une région
-func getRandomVarietyForRegion(country, region string) string {
-	varieties := getUniqueVarietiesForRegion(country, region)
-	if len(varieties) == 0 {
-		return ""
-	}
-	return varieties[rand.Intn(len(varieties))]
-}
-
-// Gestionnaire de route pour la sélection aléatoire
-func randomWineSelectionHandler(w http.ResponseWriter, r *http.Request) {
-	// Initialiser le générateur de nombres aléatoires
-	rand.Seed(time.Now().UnixNano())
-
-	// Sélection aléatoire des étapes
-	randomCountry := getRandomCountry()
-	randomRegion := getRandomRegionForCountry(randomCountry)
-	randomVariety := getRandomVarietyForRegion(randomCountry, randomRegion)
-
-	// Filtrer les vins
-	selectedWines := filterWinesBySelection(randomCountry, randomRegion, randomVariety)
-
-	// Données pour le template
-	data := struct {
-		RandomCountry string
-		RandomRegion  string
-		RandomVariety string
-		SelectedWines []Wine
-		CountryEmojis map[string]string
-	}{
-		RandomCountry: randomCountry,
-		RandomRegion:  randomRegion,
-		RandomVariety: randomVariety,
-		SelectedWines: selectedWines,
-		CountryEmojis: countryToEmoji,
-	}
-
-	// Parser et exécuter le template
-	tmpl, err := template.ParseFiles("templates/random-wine-selection.html")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	err = tmpl.Execute(w, data)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-}
-
 // Nouvelle fonction pour obtenir les pays uniques
 func getUniqueCountries() []string {
 	uniqueCountries := make(map[string]bool)
@@ -448,4 +378,107 @@ func main() {
 	// Démarrer le serveur
 	fmt.Println("Serveur démarré sur http://localhost:8080")
 	http.ListenAndServe(":8080", nil)
+}
+
+// Structure pour stocker la sélection
+type WineSelection struct {
+	Country string
+	Region  string
+	Variety string
+}
+
+// Variable globale pour stocker la sélection en cours
+var currentSelection WineSelection
+
+// Fonction pour obtenir un pays aléatoire
+func getRandomCountry() string {
+	countries := getUniqueCountries()
+	if len(countries) == 0 {
+		return ""
+	}
+	return countries[rand.Intn(len(countries))]
+}
+
+// Fonction pour obtenir une région aléatoire pour un pays
+func getRandomRegionForCountry(country string) string {
+	regions := getUniqueRegionsForCountry(country)
+	if len(regions) == 0 {
+		return ""
+	}
+	return regions[rand.Intn(len(regions))]
+}
+
+// Fonction pour obtenir une variété aléatoire pour une région
+func getRandomVarietyForRegion(country, region string) string {
+	varieties := getUniqueVarietiesForRegion(country, region)
+	if len(varieties) == 0 {
+		return ""
+	}
+	return varieties[rand.Intn(len(varieties))]
+}
+
+// Gestionnaire de route pour la sélection aléatoire par étapes
+func randomWineSelectionHandler(w http.ResponseWriter, r *http.Request) {
+	// Initialiser le générateur de nombres aléatoires
+	rand.Seed(time.Now().UnixNano())
+
+	// Récupérer l'action demandée
+	action := r.URL.Query().Get("action")
+
+	// Actions de sélection aléatoire
+	switch action {
+	case "randomCountry":
+		currentSelection.Country = getRandomCountry()
+		currentSelection.Region = ""
+		currentSelection.Variety = ""
+	case "randomRegion":
+		if currentSelection.Country == "" {
+			currentSelection.Country = getRandomCountry()
+		}
+		currentSelection.Region = getRandomRegionForCountry(currentSelection.Country)
+		currentSelection.Variety = ""
+	case "randomVariety":
+		if currentSelection.Country == "" {
+			currentSelection.Country = getRandomCountry()
+		}
+		if currentSelection.Region == "" {
+			currentSelection.Region = getRandomRegionForCountry(currentSelection.Country)
+		}
+		currentSelection.Variety = getRandomVarietyForRegion(currentSelection.Country, currentSelection.Region)
+	}
+
+	// Filtrer les vins
+	var selectedWines []Wine
+	if currentSelection.Country != "" &&
+		currentSelection.Region != "" &&
+		currentSelection.Variety != "" {
+		selectedWines = filterWinesBySelection(
+			currentSelection.Country,
+			currentSelection.Region,
+			currentSelection.Variety,
+		)
+	}
+
+	// Données pour le template
+	data := struct {
+		Selection     WineSelection
+		SelectedWines []Wine
+		CountryEmojis map[string]string
+	}{
+		Selection:     currentSelection,
+		SelectedWines: selectedWines,
+		CountryEmojis: countryToEmoji,
+	}
+
+	// Parser et exécuter le template
+	tmpl, err := template.ParseFiles("templates/random-wine-selection.html")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	err = tmpl.Execute(w, data)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }
