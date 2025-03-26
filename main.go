@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -41,12 +42,12 @@ var countryToEmoji = map[string]string{
 	"Ukraine":        "🇺🇦",
 	"Uruguay":        "🇺🇾",
 	"Lebanon":        "🇱🇧",
-	"Moldova":        "🇲🇩",
+	"Moldova":        "🇲�",
 	"Czech Republic": "🇨🇿",
 	"Serbia":         "🇷🇸",
 	"India":          "🇮🇳",
 	"China":          "🇨🇳",
-	"England":        "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
+	"England":        "🏴",
 }
 
 // Wine struct represents the wine data model
@@ -293,10 +294,25 @@ func getUniqueVarietiesForRegion(country, region string) []string {
 	return varieties
 }
 
+// Nouvelle fonction pour filtrer les vins selon pays, région et variété
+func filterWinesBySelection(country, region, variety string) []Wine {
+	var filteredWines []Wine
+
+	for _, wine := range wines {
+		if strings.EqualFold(wine.Country, country) &&
+			(region == "" || strings.EqualFold(wine.Region, region)) &&
+			(variety == "" || strings.EqualFold(wine.Variety, variety)) {
+			filteredWines = append(filteredWines, wine)
+		}
+	}
+
+	return filteredWines
+}
+
 // Gestionnaire de route pour la nouvelle approche de sélection
 func wineSelectionHandler(w http.ResponseWriter, r *http.Request) {
 	country := r.URL.Query().Get("country")
-	region := r.URL.Query().Get("province")
+	region := r.URL.Query().Get("region")
 	variety := r.URL.Query().Get("variety")
 
 	// Données pour le template
@@ -345,6 +361,37 @@ func wineSelectionHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func indexHandler(w http.ResponseWriter, r *http.Request) {
+	// Only handle the root path exactly
+	if r.URL.Path != "/" {
+		http.NotFound(w, r)
+		return
+	}
+
+	// Get the current working directory
+	wd, err := os.Getwd()
+	if err != nil {
+		http.Error(w, "Unable to get working directory", http.StatusInternalServerError)
+		return
+	}
+
+	// Construct the full path to the index.html file
+	indexPath := filepath.Join(wd, "index.html")
+
+	// Parse the template
+	tmpl, err := template.ParseFiles(indexPath)
+	if err != nil {
+		http.Error(w, "Error parsing index template: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Execute the template
+	err = tmpl.Execute(w, nil)
+	if err != nil {
+		http.Error(w, "Error executing index template: "+err.Error(), http.StatusInternalServerError)
+	}
+}
+
 func main() {
 	// Charger les vins
 	err := loadWinesFromJSON("wine-data-set.json")
@@ -357,13 +404,29 @@ func main() {
 	fs := http.FileServer(http.Dir("./static"))
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
 
+	// Route pour l'index (page principale)
+	http.HandleFunc("/", indexHandler)
+
 	// Route pour la sélection aléatoire
-	http.HandleFunc("/", randomWineSelectionHandler)
+	http.HandleFunc("/random-wine-selection", randomWineSelectionHandler)
+
+	// Route pour le marketplace
+	http.HandleFunc("/marketplace", wineMarketplaceHandler)
 
 	// Démarrer le serveur
 	fmt.Println("Serveur démarré sur http://localhost:8080")
 	http.ListenAndServe(":8080", nil)
 }
+
+// Structure pour stocker la sélection
+type WineSelection struct {
+	Country string
+	Region  string
+	Variety string
+}
+
+// Variable globale pour stocker la sélection en cours
+var currentSelection WineSelection
 
 // Fonction pour obtenir un pays aléatoire
 func getRandomCountry() string {
@@ -374,76 +437,18 @@ func getRandomCountry() string {
 	return countries[rand.Intn(len(countries))]
 }
 
-// Nouvelle fonction pour obtenir les provinces uniques
-func getUniqueProvincesForCountry(country string) []string {
-	uniqueProvinces := make(map[string]bool)
-	var provinces []string
-
-	for _, wine := range wines {
-		if strings.EqualFold(wine.Country, country) && wine.Province != "" && !uniqueProvinces[wine.Province] {
-			uniqueProvinces[wine.Province] = true
-			provinces = append(provinces, wine.Province)
-		}
-	}
-
-	return provinces
-}
-
-// Nouvelle fonction pour obtenir les variétés d'une province spécifique
-func getUniqueVarietiesForProvince(country, province string) []string {
-	uniqueVarieties := make(map[string]bool)
-	var varieties []string
-
-	for _, wine := range wines {
-		if strings.EqualFold(wine.Country, country) &&
-			strings.EqualFold(wine.Province, province) &&
-			wine.Variety != "" &&
-			!uniqueVarieties[wine.Variety] {
-			uniqueVarieties[wine.Variety] = true
-			varieties = append(varieties, wine.Variety)
-		}
-	}
-
-	return varieties
-}
-
-// Nouvelle fonction pour filtrer les vins selon pays, province et variété
-func filterWinesBySelection(country, province, variety string) []Wine {
-	var filteredWines []Wine
-
-	for _, wine := range wines {
-		if strings.EqualFold(wine.Country, country) &&
-			(province == "" || strings.EqualFold(wine.Province, province)) &&
-			(variety == "" || strings.EqualFold(wine.Variety, variety)) {
-			filteredWines = append(filteredWines, wine)
-		}
-	}
-
-	return filteredWines
-}
-
-// Structure pour stocker la sélection
-type WineSelection struct {
-	Country  string
-	Province string
-	Variety  string
-}
-
-// Variable globale pour stocker la sélection en cours
-var currentSelection WineSelection
-
-// Fonction pour obtenir une province aléatoire pour un pays
-func getRandomProvinceForCountry(country string) string {
-	provinces := getUniqueProvincesForCountry(country)
-	if len(provinces) == 0 {
+// Fonction pour obtenir une région aléatoire pour un pays
+func getRandomRegionForCountry(country string) string {
+	regions := getUniqueRegionsForCountry(country)
+	if len(regions) == 0 {
 		return ""
 	}
-	return provinces[rand.Intn(len(provinces))]
+	return regions[rand.Intn(len(regions))]
 }
 
-// Fonction pour obtenir une variété aléatoire pour une province
-func getRandomVarietyForProvince(country, province string) string {
-	varieties := getUniqueVarietiesForProvince(country, province)
+// Fonction pour obtenir une variété aléatoire pour une région
+func getRandomVarietyForRegion(country, region string) string {
+	varieties := getUniqueVarietiesForRegion(country, region)
 	if len(varieties) == 0 {
 		return ""
 	}
@@ -462,32 +467,32 @@ func randomWineSelectionHandler(w http.ResponseWriter, r *http.Request) {
 	switch action {
 	case "randomCountry":
 		currentSelection.Country = getRandomCountry()
-		currentSelection.Province = ""
+		currentSelection.Region = ""
 		currentSelection.Variety = ""
-	case "randomProvince":
+	case "randomRegion":
 		if currentSelection.Country == "" {
 			currentSelection.Country = getRandomCountry()
 		}
-		currentSelection.Province = getRandomProvinceForCountry(currentSelection.Country)
+		currentSelection.Region = getRandomRegionForCountry(currentSelection.Country)
 		currentSelection.Variety = ""
 	case "randomVariety":
 		if currentSelection.Country == "" {
 			currentSelection.Country = getRandomCountry()
 		}
-		if currentSelection.Province == "" {
-			currentSelection.Province = getRandomProvinceForCountry(currentSelection.Country)
+		if currentSelection.Region == "" {
+			currentSelection.Region = getRandomRegionForCountry(currentSelection.Country)
 		}
-		currentSelection.Variety = getRandomVarietyForProvince(currentSelection.Country, currentSelection.Province)
+		currentSelection.Variety = getRandomVarietyForRegion(currentSelection.Country, currentSelection.Region)
 	}
 
 	// Filtrer les vins
 	var selectedWines []Wine
 	if currentSelection.Country != "" &&
-		currentSelection.Province != "" &&
+		currentSelection.Region != "" &&
 		currentSelection.Variety != "" {
 		selectedWines = filterWinesBySelection(
 			currentSelection.Country,
-			currentSelection.Province,
+			currentSelection.Region,
 			currentSelection.Variety,
 		)
 	}
